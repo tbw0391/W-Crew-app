@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Camera, MessageCircle, CircleUserRound, Music, ChevronLeft } from "lucide-react";
 
@@ -9,10 +8,14 @@ export function Header({
   unreadCount,
   userId,
   photoUrl,
+  clubName,
+  iconUrl,
 }: {
   unreadCount: number | null;
   userId: string | null;
   photoUrl: string | null;
+  clubName: string;
+  iconUrl: string;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -45,14 +48,8 @@ export function Header({
           )}
         </div>
         <Link href="/" aria-label="Home" className="inline-flex">
-          <Image
-            src="/icons/icon-512.png"
-            alt="Westerville Crew home"
-            width={512}
-            height={512}
-            priority
-            className="w-14 h-14"
-          />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={iconUrl} alt={`${clubName} home`} className="w-14 h-14" />
         </Link>
         {userId && (
           <div className="absolute right-4 flex items-center">

@@ -3,7 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { NAV_SECTIONS, NAV_VISIBILITY_OPTIONS, resolveNavVisibility } from "@/lib/navSections";
 import { LINEUP_SECTIONS, resolveLineupSectionVisibility } from "@/lib/lineupSections";
 import { THEME_COLOR_LABELS, parseThemeColors, type ThemeColorKey } from "@/lib/theme";
-import { updateNavToggles, updateLineupSectionVisibility, updateThemeColors, resetThemeColors } from "./actions";
+import { BRANDING_LABELS, parseBranding, type BrandingKey } from "@/lib/branding";
+import {
+  updateNavToggles,
+  updateLineupSectionVisibility,
+  updateThemeColors,
+  resetThemeColors,
+  updateBranding,
+  resetBranding,
+} from "./actions";
 
 const VISIBILITY_LABEL: Record<string, string> = {
   everyone: "Everyone",
@@ -29,19 +37,59 @@ export default async function AdminPage() {
   const { data: settingsData } = await supabase
     .from("club_settings")
     .select("key, value")
-    .in("key", ["nav_visibility", "nav_disabled_hrefs", "theme_colors", "lineup_section_visibility"]);
+    .in("key", [
+      "nav_visibility",
+      "nav_disabled_hrefs",
+      "theme_colors",
+      "lineup_section_visibility",
+      "branding",
+    ]);
   const settingsByKey = new Map(
     ((settingsData as { key: string; value: string | null }[] | null) ?? []).map((s) => [s.key, s.value])
   );
   const visibilityByHref = resolveNavVisibility(settingsByKey);
   const themeColors = parseThemeColors(settingsByKey.get("theme_colors"));
   const lineupSectionVisibility = resolveLineupSectionVisibility(settingsByKey);
+  const branding = parseBranding(settingsByKey.get("branding"));
 
   return (
     <div className="min-h-screen p-8">
       <h1 className="text-2xl font-bold mb-2">Admin Settings</h1>
 
-      <h2 className="text-lg font-semibold mt-6 mb-2">Site colors</h2>
+      <h2 className="text-lg font-semibold mt-6 mb-2">Branding</h2>
+      <p className="text-sm text-gray-500 mb-4">
+        Club name, browser tab title, tagline, and logo/icon shown across the site — lets a
+        separately-deployed copy of this app (e.g. a sales demo) show entirely different branding.
+      </p>
+      <form action={updateBranding} className="flex flex-col gap-3 max-w-sm mb-8">
+        {(Object.keys(BRANDING_LABELS) as BrandingKey[]).map((key) => (
+          <label key={key} className="flex flex-col gap-1 text-sm">
+            <span className="font-medium">{BRANDING_LABELS[key]}</span>
+            <input
+              name={`branding:${key}`}
+              defaultValue={branding[key]}
+              className="border rounded px-3 py-2 text-sm"
+            />
+          </label>
+        ))}
+        <div className="flex gap-2 mt-2">
+          <button
+            type="submit"
+            className="flex-1 bg-[var(--color-primary)] text-white rounded-lg px-4 py-3 text-sm font-medium hover:bg-[var(--color-accent)] transition-colors"
+          >
+            Save branding
+          </button>
+          <button
+            type="submit"
+            formAction={resetBranding}
+            className="text-sm text-gray-500 hover:underline px-2"
+          >
+            Reset to defaults
+          </button>
+        </div>
+      </form>
+
+      <h2 className="text-lg font-semibold mb-2">Site colors</h2>
       <p className="text-sm text-gray-500 mb-4">
         Pick the 4 colors used across the site&apos;s buttons, borders, and background.
       </p>

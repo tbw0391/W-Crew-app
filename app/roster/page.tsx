@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ProfileTeam, Team } from "@/lib/database.types";
+import { getBranding } from "@/lib/branding";
 import { AddMemberForm } from "./AddMemberForm";
 import { ImportForm } from "./ImportForm";
 import { SignupQrButton } from "./SignupQrButton";
@@ -10,6 +11,7 @@ const ROSTER_COLUMNS =
 
 export default async function RosterPage() {
   const supabase = await createClient();
+  const branding = await getBranding();
 
   // Only the columns the roster table and its manage-permission check
   // actually use — not the full profile (bio, address, erg times, etc.).
@@ -50,7 +52,7 @@ export default async function RosterPage() {
         <div className="flex flex-wrap items-start gap-2">
           <AddMemberForm />
           <ImportForm />
-          <SignupQrButton />
+          <SignupQrButton clubName={branding.clubName} />
         </div>
       )}
 

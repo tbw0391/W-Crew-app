@@ -7,6 +7,7 @@ import { ServiceWorkerUpdater } from "@/components/ServiceWorkerUpdater";
 import { createClient } from "@/lib/supabase/server";
 import { getUnreadChatCount } from "@/lib/chat";
 import { getThemeColors } from "@/lib/theme";
+import { getBranding } from "@/lib/branding";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,16 +20,19 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-export const metadata: Metadata = {
-  title: "W-Crew-app",
-  description: "Westerville Rowing Club — roster, schedule, lineups, volunteers, and messaging.",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "W-Crew",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const branding = await getBranding();
+  return {
+    title: branding.appTitle,
+    description: branding.tagline,
+    manifest: "/manifest.json",
+    appleWebApp: {
+      capable: true,
+      statusBarStyle: "default",
+      title: branding.clubName,
+    },
+  };
+}
 
 export async function generateViewport(): Promise<Viewport> {
   const theme = await getThemeColors();
@@ -49,6 +53,7 @@ export default async function RootLayout({
   } = await supabase.auth.getUser();
   const unreadCount = user ? await getUnreadChatCount(user.id) : null;
   const theme = await getThemeColors();
+  const branding = await getBranding();
 
   let photoUrl: string | null = null;
   if (user) {
@@ -73,7 +78,13 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ServiceWorkerUpdater />
-        <Header unreadCount={unreadCount} userId={user?.id ?? null} photoUrl={photoUrl} />
+        <Header
+          unreadCount={unreadCount}
+          userId={user?.id ?? null}
+          photoUrl={photoUrl}
+          clubName={branding.clubName}
+          iconUrl={branding.iconUrl}
+        />
         <PullToRefresh>
           <div className="pb-16">{children}</div>
         </PullToRefresh>

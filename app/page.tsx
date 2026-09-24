@@ -1,5 +1,4 @@
 import Link from "next/link";
-import Image from "next/image";
 import {
   Users,
   Calendar,
@@ -47,6 +46,7 @@ import { getUnreadChatCount } from "@/lib/chat";
 import { getUnreadScheduleCount } from "@/lib/schedule";
 import { getOrRefreshEventForecast } from "@/lib/weather";
 import { NAV_SECTIONS, resolveNavVisibility } from "@/lib/navSections";
+import { parseBranding } from "@/lib/branding";
 
 const ICONS_BY_HREF: Record<string, LucideIcon> = {
   "/roster": Users,
@@ -516,7 +516,13 @@ export default async function Home() {
     supabase
       .from("club_settings")
       .select("key, value")
-      .in("key", ["team_store_url", "team_store_featured_items", "nav_visibility", "nav_disabled_hrefs"]),
+      .in("key", [
+        "team_store_url",
+        "team_store_featured_items",
+        "nav_visibility",
+        "nav_disabled_hrefs",
+        "branding",
+      ]),
   ]);
   const settingsByKey = new Map(
     ((settingsData as { key: string; value: string | null }[] | null) ?? []).map((s) => [s.key, s.value])
@@ -524,6 +530,7 @@ export default async function Home() {
   const storeUrl = settingsByKey.get("team_store_url") ?? null;
   const featuredItems = parseStoreItems(settingsByKey.get("team_store_featured_items") ?? null);
   const navVisibilityByHref = resolveNavVisibility(settingsByKey);
+  const branding = parseBranding(settingsByKey.get("branding"));
 
   let banners: FoodTentBanner[] = [];
   let lineupBanners: LineupBanner[] = [];
@@ -681,14 +688,8 @@ export default async function Home() {
         </div>
       )}
       <div className="text-center">
-        <Image
-          src="/branding/logo-full.png"
-          alt="Westerville Crew"
-          width={480}
-          height={530}
-          priority
-          className="w-40 h-auto mx-auto"
-        />
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={branding.logoUrl} alt={branding.clubName} className="w-40 h-auto mx-auto" />
       </div>
 
       {announcementBanners.length > 0 && (
@@ -965,7 +966,7 @@ export default async function Home() {
             <ShoppingBag className="w-7 h-7 shrink-0" />
             <div>
               <p className="text-lg font-bold leading-tight">Team Store</p>
-              <p className="text-sm text-white/80">Shop official Westerville Crew gear →</p>
+              <p className="text-sm text-white/80">Shop official {branding.clubName} gear →</p>
             </div>
           </a>
           {featuredItems.length > 0 && (

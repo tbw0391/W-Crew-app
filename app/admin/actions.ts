@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { NAV_SECTIONS, NAV_VISIBILITY_OPTIONS, type NavVisibility } from "@/lib/navSections";
 import { LINEUP_SECTIONS } from "@/lib/lineupSections";
 import { DEFAULT_THEME_COLORS, isHexColor, type ThemeColorKey } from "@/lib/theme";
+import { DEFAULT_BRANDING, type BrandingKey } from "@/lib/branding";
 
 export async function updateNavToggles(formData: FormData) {
   const supabase = await createClient();
@@ -130,6 +131,62 @@ export async function updateThemeColors(formData: FormData) {
   const { error } = await supabase
     .from("club_settings")
     .upsert({ key: "theme_colors", value: JSON.stringify(colors) }, { onConflict: "key" });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/", "layout");
+}
+
+export async function updateBranding(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if ((callerProfile as { role: string } | null)?.role !== "admin") {
+    throw new Error("Only admins can change the branding.");
+  }
+
+  const branding: Record<BrandingKey, string> = { ...DEFAULT_BRANDING };
+  for (const key of Object.keys(DEFAULT_BRANDING) as BrandingKey[]) {
+    const raw = String(formData.get(`branding:${key}`) ?? "").trim();
+    if (raw) branding[key] = raw;
+  }
+
+  const { error } = await supabase
+    .from("club_settings")
+    .upsert({ key: "branding", value: JSON.stringify(branding) }, { onConflict: "key" });
+
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/", "layout");
+}
+
+export async function resetBranding() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not signed in.");
+
+  const { data: callerProfile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+  if ((callerProfile as { role: string } | null)?.role !== "admin") {
+    throw new Error("Only admins can change the branding.");
+  }
+
+  const { error } = await supabase
+    .from("club_settings")
+    .upsert({ key: "branding", value: JSON.stringify(DEFAULT_BRANDING) }, { onConflict: "key" });
 
   if (error) throw new Error(error.message);
 
