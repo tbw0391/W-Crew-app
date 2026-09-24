@@ -400,6 +400,19 @@
       telling them their role changed.
 
 ## Infra / cross-cutting
+- [x] Fixed (2026-09-24): regatta logo icons (e.g. the Head of the Cuyahoga
+      icon on the Lineups event list) showed as a broken image. Root cause:
+      the auth middleware's route matcher (middleware.ts) requires a signed-
+      in session for every path except an explicit exclude list, and that
+      list already carved out `/icons` and `/branding` for pre-auth assets
+      like the login-page logo, but was never updated when `/regatta-icons`
+      was added later — unauthenticated/stale-session requests for those
+      images got redirected to `/login` instead of the image. Added
+      `regatta-icons` to the matcher's exclude list.
+- [x] Log out button (2026-09-24): "Log out" on a member's own bio page
+      (/roster/[id], the page the header's profile avatar links to) —
+      Supabase `auth.signOut()` then redirects to /login. There was no
+      sign-out path anywhere in the app before this.
 - [x] Real app icons (favicon, PWA icons, home page/login logo) — club branding
 - [x] Site colors (2026-09-22): admin picks Primary/Secondary/Accent/
       Background from /admin, stored in club_settings.theme_colors and
