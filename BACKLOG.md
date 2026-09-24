@@ -280,6 +280,16 @@
       food tent item import: Title/Task/Name, Slots Needed/Slots/People
       Needed, Description/Notes columns (case-insensitive), only Title
       required
+- [x] Regatta button grid (2026-09-24): the Volunteer Needs page is now a
+      button per regatta (Sailboat icon, same as the Schedule page's Regattas
+      tile) linking to `/volunteer/[eventId]` for that regatta's slots,
+      instead of every regatta's slots always expanded inline on one page —
+      same pattern as the Lineups page's per-event buttons. Every regatta on
+      the schedule automatically gets a button here (no separate "add a
+      section" step needed) since the page just queries
+      `schedule_events` for `event_type = 'regatta'`. A past regatta (start
+      time already passed) drops into a collapsed, greyed-out "Past
+      regattas" section at the bottom instead of sitting with upcoming ones.
 - [x] Edit/delete polish pass (2026-09-24): manager delete button now says
       "Delete slot" (not just "Delete") with a tooltip clarifying it removes
       the slot for everyone, and the confirm dialog points people at the
