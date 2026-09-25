@@ -31,11 +31,19 @@ interface CrewTimerEntry {
 interface CrewTimerEvent {
   EventNum?: string;
   Event?: string;
+  Start?: string;
   entries?: CrewTimerEntry[];
+}
+
+interface CrewTimerRegattaInfo {
+  Title?: string;
+  Date?: string; // "YYYY-MM-DD"
+  LogoURL?: string;
 }
 
 interface CrewTimerResults {
   results?: CrewTimerEvent[];
+  regattaInfo?: CrewTimerRegattaInfo;
 }
 
 function resultsUrl(mobileId: string): string {
@@ -43,6 +51,75 @@ function resultsUrl(mobileId: string): string {
     return `https://crewtimer-results-dev.firebaseio.com/results/${mobileId.slice(2)}.json`;
   }
   return `https://crewtimer-results.firebaseio.com/results/${mobileId}.json`;
+}
+
+async function fetchResults(mobileId: string): Promise<CrewTimerResults | null> {
+  try {
+    const res = await fetch(resultsUrl(mobileId), { cache: "no-store" });
+    if (!res.ok) return null;
+    return (await res.json()) as CrewTimerResults;
+  } catch {
+    return null;
+  }
+}
+
+// A CrewTimer mobile ID looks like "r12967" (or "t.r12967" for their dev
+// server) and shows up as-is somewhere in that regatta's crewtimer.com URL,
+// whatever the exact path shape — so pulling it out with a regex works
+// whether someone pastes the bare ID or a full link.
+const MOBILE_ID_PATTERN = /\bt\.r\d+\b|\br\d{3,7}\b/i;
+
+export function extractCrewTimerMobileId(input: string): string | null {
+  const match = input.match(MOBILE_ID_PATTERN);
+  return match ? match[0] : null;
+}
+
+export interface CrewTimerRaceRow {
+  race_name: string;
+  race_time?: string;
+}
+
+export interface CrewTimerRegattaPreview {
+  title: string | null;
+  date: string | null;
+  iconUrl: string | null;
+  raceRows: CrewTimerRaceRow[];
+}
+
+// Builds a preview of what "Add regatta from a link" would create for a
+// CrewTimer regatta: the regatta's own title/date/logo, plus one race row
+// per event we're entered in (Crew contains "Westerville") — the same shape
+// importRaces() already accepts from a manual heat-sheet upload, just
+// sourced from CrewTimer instead of an Excel file.
+export async function fetchCrewTimerRegattaPreview(mobileId: string): Promise<CrewTimerRegattaPreview | null> {
+  const data = await fetchResults(mobileId);
+  if (!data) return null;
+
+  const raceRows: CrewTimerRaceRow[] = [];
+  for (const ctEvent of data.results ?? []) {
+    const ourEntries = (ctEvent.entries ?? []).filter((e) => e.Crew?.toLowerCase().includes(OUR_CREW_NAME));
+    if (ourEntries.length === 0) continue;
+
+    const label = [ctEvent.EventNum, ctEvent.Event].filter(Boolean).join(" - ") || ctEvent.Event || "Race";
+    let raceTime: string | undefined;
+    if (data.regattaInfo?.Date && ctEvent.Start) {
+      const parsed = new Date(`${data.regattaInfo.Date}T${ctEvent.Start}`);
+      if (!isNaN(parsed.getTime())) raceTime = parsed.toISOString();
+    }
+
+    // One row per entry, not per event — covers the (rare) case of two of
+    // our boats entered in the same event.
+    for (let i = 0; i < ourEntries.length; i++) {
+      raceRows.push({ race_name: label, race_time: raceTime });
+    }
+  }
+
+  return {
+    title: data.regattaInfo?.Title ?? null,
+    date: data.regattaInfo?.Date ?? null,
+    iconUrl: data.regattaInfo?.LogoURL ?? null,
+    raceRows,
+  };
 }
 
 function entryFinishTime(entry: CrewTimerEntry): string | null {
@@ -87,13 +164,7 @@ export async function getOrRefreshCrewTimerResults(
   const lastSynced = event.crewtimer_synced_at ? new Date(event.crewtimer_synced_at).getTime() : 0;
   if (Date.now() - lastSynced < CACHE_TTL_MS) return;
 
-  let data: CrewTimerResults | null = null;
-  try {
-    const res = await fetch(resultsUrl(mobileId), { cache: "no-store" });
-    if (res.ok) data = (await res.json()) as CrewTimerResults;
-  } catch {
-    // CrewTimer unreachable or regatta not found — leave existing results alone.
-  }
+  const data = await fetchResults(mobileId);
 
   const ourEntries = (data?.results ?? [])
     .flatMap((ctEvent) => ctEvent.entries ?? [])

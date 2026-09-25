@@ -60,6 +60,7 @@ export interface ScheduleEvent {
   created_at: string;
   crewtimer_mobile_id: string | null;
   crewtimer_synced_at: string | null;
+  icon_url: string | null;
 }
 
 export interface EventForecast {
