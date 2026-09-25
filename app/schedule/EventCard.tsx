@@ -187,7 +187,7 @@ export function EventCard({
     <div className="border rounded-lg p-4">
       <div className="flex items-baseline justify-between gap-2">
         <h3 className="flex items-center gap-1.5 font-medium">
-          <EventIcon title={event.title} />
+          <EventIcon title={event.title} iconUrl={event.icon_url} />
           {event.title}
           {medalPlace != null && medalPlace <= 3 && (
             <span title={`We finished in ${medalPlace === 1 ? "1st" : medalPlace === 2 ? "2nd" : "3rd"} place`}>
