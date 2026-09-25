@@ -1053,7 +1053,7 @@ export default async function Home() {
       </div>
 
       {storeUrl && (
-        <div className="w-full max-w-md rounded-xl border-2 border-[var(--color-primary)] overflow-hidden">
+        <div className="w-full rounded-xl border-2 border-[var(--color-primary)] overflow-hidden">
           <a
             href={storeUrl}
             target="_blank"
