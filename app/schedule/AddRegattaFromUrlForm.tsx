@@ -4,14 +4,6 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { previewRegattaUrl, createRegattaFromPreview, type RegattaUrlPreview } from "./actions";
 
-function toLocalInputValue(dateOnly: string | null): string {
-  // previewRegattaUrl only ever gives us a date (CrewTimer doesn't expose a
-  // start clock time at the regatta level) — noon avoids the date flipping
-  // to the day before/after once it round-trips through UTC.
-  if (!dateOnly) return "";
-  return `${dateOnly}T12:00`;
-}
-
 export function AddRegattaFromUrlForm() {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -114,11 +106,11 @@ export function AddRegattaFromUrlForm() {
             className="rounded-md border px-3 py-2 outline-none focus:border-[var(--color-primary)]"
           />
           <label className="flex flex-col gap-1 text-sm text-gray-600">
-            Starts
+            Date
             <input
-              type="datetime-local"
-              name="starts_at"
-              defaultValue={toLocalInputValue(preview.startsAtDate)}
+              type="date"
+              name="starts_at_date"
+              defaultValue={preview.startsAtDate ?? ""}
               required
               className="rounded-md border px-3 py-2 outline-none focus:border-[var(--color-primary)]"
             />

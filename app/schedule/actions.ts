@@ -188,13 +188,20 @@ export async function createRegattaFromPreview(formData: FormData) {
   const { user } = await requireManager(supabase);
 
   const title = String(formData.get("title") ?? "").trim();
-  const startsAtRaw = String(formData.get("starts_at") ?? "").trim();
+  const startsAtDateRaw = String(formData.get("starts_at_date") ?? "").trim();
   const location = String(formData.get("location") ?? "").trim() || null;
   const iconUrl = String(formData.get("icon_url") ?? "").trim() || null;
   const crewtimerMobileId = String(formData.get("crewtimer_mobile_id") ?? "").trim() || null;
   const raceRowsRaw = String(formData.get("race_rows_json") ?? "").trim();
 
-  if (!title || !startsAtRaw) throw new Error("Title and start date/time are required.");
+  if (!title || !startsAtDateRaw) throw new Error("Title and date are required.");
+
+  // No clock time is asked for here — regattas made this way don't have one
+  // (CrewTimer doesn't expose a start time at the regatta level) — noon
+  // keeps the stored date from flipping to the day before/after once it
+  // round-trips through UTC.
+  const startsAt = new Date(`${startsAtDateRaw}T12:00:00`);
+  if (isNaN(startsAt.getTime())) throw new Error("Couldn't read that date.");
 
   const { data: inserted, error } = await supabase
     .from("schedule_events")
@@ -202,7 +209,7 @@ export async function createRegattaFromPreview(formData: FormData) {
       title,
       location,
       event_type: "regatta",
-      starts_at: new Date(startsAtRaw).toISOString(),
+      starts_at: startsAt.toISOString(),
       recurrence: "none",
       created_by: user.id,
       crewtimer_mobile_id: crewtimerMobileId,
