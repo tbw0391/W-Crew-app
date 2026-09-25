@@ -44,6 +44,7 @@ export async function createScheduleEvent(formData: FormData) {
   const recurrence: ScheduleRecurrence = RECURRENCES.includes(recurrenceRaw as ScheduleRecurrence)
     ? (recurrenceRaw as ScheduleRecurrence)
     : "none";
+  const crewtimerMobileId = String(formData.get("crewtimer_mobile_id") ?? "").trim() || null;
 
   if (!title || !startsAtRaw) throw new Error("Title and start date/time are required.");
 
@@ -56,6 +57,7 @@ export async function createScheduleEvent(formData: FormData) {
     ends_at: endsAtRaw ? new Date(endsAtRaw).toISOString() : null,
     recurrence,
     created_by: user.id,
+    crewtimer_mobile_id: crewtimerMobileId,
   });
 
   if (error) throw new Error(error.message);
@@ -79,9 +81,18 @@ export async function updateScheduleEvent(formData: FormData) {
   const recurrence: ScheduleRecurrence = RECURRENCES.includes(recurrenceRaw as ScheduleRecurrence)
     ? (recurrenceRaw as ScheduleRecurrence)
     : "none";
+  const crewtimerMobileId = String(formData.get("crewtimer_mobile_id") ?? "").trim() || null;
 
   if (!eventId) throw new Error("Missing event.");
   if (!title || !startsAtRaw) throw new Error("Title and start date/time are required.");
+
+  const { data: existing } = await supabase
+    .from("schedule_events")
+    .select("crewtimer_mobile_id")
+    .eq("id", eventId)
+    .single();
+  const mobileIdChanged =
+    (existing as { crewtimer_mobile_id: string | null } | null)?.crewtimer_mobile_id !== crewtimerMobileId;
 
   const { error } = await supabase
     .from("schedule_events")
@@ -92,6 +103,10 @@ export async function updateScheduleEvent(formData: FormData) {
       starts_at: new Date(startsAtRaw).toISOString(),
       ends_at: endsAtRaw ? new Date(endsAtRaw).toISOString() : null,
       recurrence,
+      crewtimer_mobile_id: crewtimerMobileId,
+      // A newly-set or changed ID should be fetched right away, not held
+      // back by whatever the old ID's last-synced timestamp was.
+      ...(mobileIdChanged ? { crewtimer_synced_at: null } : {}),
     })
     .eq("id", eventId);
 

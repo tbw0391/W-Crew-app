@@ -18,6 +18,7 @@ import {
   Settings,
   Vote,
   Megaphone,
+  Trophy,
   type LucideIcon,
 } from "lucide-react";
 import RacingScull from "@/components/icons/RacingScull";
@@ -47,6 +48,9 @@ import { getUnreadScheduleCount } from "@/lib/schedule";
 import { getOrRefreshEventForecast } from "@/lib/weather";
 import { NAV_SECTIONS, resolveNavVisibility } from "@/lib/navSections";
 import { parseBranding } from "@/lib/branding";
+import { placeEmoji, ordinalPlace } from "@/lib/raceResults";
+import { LINEUP_CATEGORIES } from "@/lib/lineupCategories";
+import { BOAT_CLASSES } from "@/lib/boatClasses";
 
 const ICONS_BY_HREF: Record<string, LucideIcon> = {
   "/roster": Users,
@@ -98,6 +102,14 @@ type PendingRaceBanner = { eventTitle: string; eventDate: string; count: number 
 type AnnouncementBanner = { id: string; message: string; senderName: string; createdAt: string };
 
 type FoodPrepBanner = { eventId: string; eventTitle: string; eventDate: string };
+
+type RaceResultBanner = {
+  lineupId: string;
+  raceLabel: string | null;
+  categoryLabel: string;
+  place: number;
+  resultTime: string | null;
+};
 
 type SignupCallBanner = {
   eventId: string;
@@ -332,6 +344,40 @@ async function loadFoodPrepBanners(supabase: SupabaseServerClient): Promise<Food
   }));
 }
 
+// Everyone's notification, not gated by role/household: any of our boats
+// racing today (manually entered, or auto-filled from CrewTimer — see
+// lib/crewtimer.ts) that now has a place gets announced to the whole club.
+// Naturally expires once the regatta's calendar day passes, same as the
+// other startOfToday()-filtered banners above.
+async function loadRaceResultBanners(supabase: SupabaseServerClient): Promise<RaceResultBanner[]> {
+  const { data: eventRows } = await supabase
+    .from("schedule_events")
+    .select("id")
+    .eq("event_type", "regatta")
+    .gte("starts_at", startOfToday());
+  const eventIds = ((eventRows as Pick<ScheduleEvent, "id">[] | null) ?? []).map((e) => e.id);
+  if (eventIds.length === 0) return [];
+
+  const { data: lineupRows } = await supabase
+    .from("lineups")
+    .select("*")
+    .in("event_id", eventIds)
+    .not("place", "is", null);
+  const lineups = (lineupRows as Lineup[] | null) ?? [];
+
+  return lineups
+    .map((l) => ({
+      lineupId: l.id,
+      raceLabel: l.race_name,
+      categoryLabel: l.category
+        ? LINEUP_CATEGORIES[l.category] ?? l.category
+        : BOAT_CLASSES[l.boat_class]?.label ?? l.boat_class,
+      place: l.place as number,
+      resultTime: l.result_time,
+    }))
+    .sort((a, b) => a.place - b.place);
+}
+
 // Parent/guardian notification: the food list has been published, so it's
 // time to sign up for food items and (if any are posted) volunteer slots.
 async function loadSignupCallBanners(
@@ -539,6 +585,7 @@ export default async function Home() {
   let foodPrepBanners: FoodPrepBanner[] = [];
   let signupCallBanners: SignupCallBanner[] = [];
   let announcementBanners: AnnouncementBanner[] = [];
+  let raceResultBanners: RaceResultBanner[] = [];
   let upcomingRegatta: ScheduleEvent | null = null;
   let upcomingRegattaForecast: EventForecast | null = null;
   let unreadCount = 0;
@@ -629,6 +676,7 @@ export default async function Home() {
       signupCallBannerResults,
       forecastResult,
       announcementBannerResults,
+      raceResultBannerResults,
     ] = await Promise.all([
       loadFoodTentBanners(supabase, householdUserIds),
       loadLineupBanners(supabase, {
@@ -649,6 +697,7 @@ export default async function Home() {
         : isParent
         ? loadAnnouncementBanners(supabase, ["parents", "both"])
         : Promise.resolve([]),
+      loadRaceResultBanners(supabase),
     ]);
     banners = foodBanners;
     upcomingRegattaForecast = forecastResult;
@@ -657,6 +706,7 @@ export default async function Home() {
     pendingRaceBanners = pendingRaceBannerResults;
     foodPrepBanners = foodPrepBannerResults;
     announcementBanners = announcementBannerResults;
+    raceResultBanners = raceResultBannerResults;
     const isGuardian = (familyLinkRows.data ?? []).length > 0;
     signupCallBanners = isParent || isGuardian ? signupCallBannerResults : [];
 
@@ -706,6 +756,53 @@ export default async function Home() {
               </span>
             </Link>
           ))}
+        </div>
+      )}
+
+      {raceResultBanners.length > 0 && (
+        <div className="w-full flex flex-col gap-2">
+          {raceResultBanners.map((b, i) => {
+            const isMedal = b.place <= 3;
+            const medalStyle =
+              b.place === 1
+                ? "bg-gradient-to-r from-yellow-300 via-amber-400 to-yellow-300 text-yellow-950 border-2 border-yellow-600"
+                : b.place === 2
+                ? "bg-gradient-to-r from-gray-200 via-slate-300 to-gray-200 text-gray-900 border-2 border-gray-500"
+                : b.place === 3
+                ? "bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 text-amber-50 border-2 border-amber-800"
+                : i % 2 === 0
+                ? "bg-[var(--color-primary)] text-white"
+                : "bg-[var(--color-secondary)] text-white";
+
+            return (
+              <div
+                key={b.lineupId}
+                className={`relative overflow-hidden rounded-lg px-4 py-3 text-sm font-medium ${medalStyle}`}
+              >
+                {isMedal && (
+                  <span
+                    aria-hidden
+                    className="pointer-events-none absolute inset-0 flex items-center justify-around text-lg opacity-40"
+                  >
+                    <span>🎉</span>
+                    <span>✨</span>
+                    <span>🎊</span>
+                    <span>✨</span>
+                    <span>🎉</span>
+                  </span>
+                )}
+                <span className="relative flex items-center gap-2">
+                  {isMedal && <Trophy className="w-5 h-5 shrink-0 animate-bounce" />}
+                  <span>
+                    {b.raceLabel && <strong>{b.raceLabel}</strong>}
+                    {b.raceLabel && " — "}
+                    {b.categoryLabel}: {placeEmoji(b.place)} <strong>{ordinalPlace(b.place)} place</strong>
+                    {b.resultTime && <> · {b.resultTime}</>}
+                  </span>
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 

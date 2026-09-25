@@ -122,6 +122,21 @@ export function EventCard({
           placeholder="Details (optional)"
           className="rounded-md border px-3 py-2 outline-none focus:border-[var(--color-primary)]"
         />
+        {eventType === "regatta" && (
+          <label className="flex flex-col gap-1 text-sm text-gray-600">
+            CrewTimer mobile ID (optional)
+            <input
+              name="crewtimer_mobile_id"
+              defaultValue={event.crewtimer_mobile_id ?? ""}
+              placeholder="e.g. r12967"
+              className="rounded-md border px-3 py-2 outline-none focus:border-[var(--color-primary)]"
+            />
+            <span className="text-xs text-gray-400">
+              From this regatta&apos;s crewtimer.com results link. Once set, race results for our
+              coxed boats fill in automatically on the Lineups page.
+            </span>
+          </label>
+        )}
         <label className="flex flex-col gap-1 text-sm text-gray-600">
           Repeats
           <select
