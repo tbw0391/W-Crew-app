@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { deleteScheduleEvent, updateScheduleEvent } from "./actions";
 import type { EventType, ScheduleEvent } from "@/lib/database.types";
 import { EventIcon } from "@/components/EventIcon";
@@ -49,7 +49,17 @@ export function EventCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
   const [isPending, startTransition] = useTransition();
+
+  // The form just closes back to the display view on success, which is easy
+  // to miss as a "did that work?" signal — this flashes an explicit
+  // confirmation instead of forcing a jarring full page reload.
+  useEffect(() => {
+    if (!justSaved) return;
+    const timer = setTimeout(() => setJustSaved(false), 2500);
+    return () => clearTimeout(timer);
+  }, [justSaved]);
 
   function handleUpdate(formData: FormData) {
     setError(null);
@@ -57,6 +67,7 @@ export function EventCard({
       try {
         await updateScheduleEvent(formData);
         setEditing(false);
+        setJustSaved(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Something went wrong.");
       }
@@ -208,6 +219,7 @@ export function EventCard({
         </div>
       )}
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+      {justSaved && <p className="mt-2 text-sm font-medium text-green-600">✓ Saved</p>}
       {canManage && (
         <div className="mt-3 flex gap-3 border-t pt-3">
           <button
