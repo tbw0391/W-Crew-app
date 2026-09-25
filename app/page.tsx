@@ -769,7 +769,7 @@ export default async function Home() {
                 : b.place === 2
                 ? "bg-gradient-to-r from-gray-200 via-slate-300 to-gray-200 text-gray-900 border-2 border-gray-500"
                 : b.place === 3
-                ? "bg-gradient-to-r from-amber-600 via-orange-500 to-amber-600 text-amber-50 border-2 border-amber-800"
+                ? "bg-gradient-to-r from-[#8a5a2e] via-[#cd8347] to-[#8a5a2e] text-orange-50 border-2 border-[#5c3a1e]"
                 : i % 2 === 0
                 ? "bg-[var(--color-primary)] text-white"
                 : "bg-[var(--color-secondary)] text-white";
