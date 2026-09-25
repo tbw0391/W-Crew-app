@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { EventType, Lineup, Role, ScheduleEvent } from "@/lib/database.types";
 import { createScheduleEvent } from "./actions";
 import { EventCard } from "./EventCard";
+import { AddRegattaFromUrlForm } from "./AddRegattaFromUrlForm";
 
 export async function ScheduleTypeView({ eventType, label }: { eventType: EventType; label: string }) {
   const supabase = await createClient();
@@ -57,6 +58,12 @@ export async function ScheduleTypeView({ eventType, label }: { eventType: EventT
         ← Schedule
       </Link>
       <h1 className="text-2xl font-bold mt-4 mb-6">{label}</h1>
+
+      {canManage && eventType === "regatta" && (
+        <div className="max-w-lg flex flex-col">
+          <AddRegattaFromUrlForm />
+        </div>
+      )}
 
       {canManage && (
         <form
