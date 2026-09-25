@@ -94,6 +94,7 @@ export function AddRegattaFromUrlForm() {
         </>
       ) : (
         <form action={handleCreate} className="flex flex-col gap-3">
+          {preview.note && <p className="text-xs text-amber-700">{preview.note}</p>}
           {preview.iconUrl && (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={preview.iconUrl} alt="" className="w-12 h-12 object-contain self-start" />
@@ -129,11 +130,11 @@ export function AddRegattaFromUrlForm() {
             <p className="text-xs text-gray-500">
               Found this regatta on CrewTimer, but no races for us yet — add them later once entries are in.
             </p>
-          ) : (
+          ) : !preview.note ? (
             <p className="text-xs text-gray-500">
               Couldn&apos;t auto-import a race schedule from this link — add races afterward the usual way.
             </p>
-          )}
+          ) : null}
           {error && <p className="text-sm text-red-600">{error}</p>}
           <button
             type="submit"

@@ -140,6 +140,18 @@ export interface RegattaUrlPreview {
   startsAtDate: string | null;
   crewtimerMobileId: string | null;
   raceRows: CrewTimerRaceRow[];
+  note: string | null;
+}
+
+// RegattaCentral's regatta pages (and its API) sit behind a Cloudflare bot
+// challenge / partner-only API key — a server-side fetch always gets a 403,
+// so there's no point even trying before falling back to manual entry.
+function isRegattaCentralUrl(input: string): boolean {
+  try {
+    return new URL(input).hostname.toLowerCase().endsWith("regattacentral.com");
+  } catch {
+    return false;
+  }
 }
 
 // Step 1 of "Add regatta from a link": figures out what kind of link this
@@ -165,6 +177,7 @@ export async function previewRegattaUrl(formData: FormData): Promise<RegattaUrlP
         startsAtDate: preview.date,
         crewtimerMobileId: mobileId,
         raceRows: preview.raceRows,
+        note: null,
       };
     }
     // Looked like a CrewTimer ID but nothing came back for it (wrong ID,
@@ -172,9 +185,27 @@ export async function previewRegattaUrl(formData: FormData): Promise<RegattaUrlP
     // than failing outright.
   }
 
+  if (isRegattaCentralUrl(input)) {
+    return {
+      title: null,
+      iconUrl: null,
+      startsAtDate: null,
+      crewtimerMobileId: null,
+      raceRows: [],
+      note: "RegattaCentral blocks automatic lookups — paste the regatta's own website link instead for a title/icon, or just fill in the details below by hand.",
+    };
+  }
+
   if (/^https?:\/\//i.test(input)) {
     const meta = await fetchUrlMeta(input);
-    return { title: meta.title, iconUrl: meta.iconUrl, startsAtDate: null, crewtimerMobileId: null, raceRows: [] };
+    return {
+      title: meta.title,
+      iconUrl: meta.iconUrl,
+      startsAtDate: null,
+      crewtimerMobileId: null,
+      raceRows: [],
+      note: null,
+    };
   }
 
   throw new Error("That doesn't look like a link — paste the regatta's website or CrewTimer link.");
