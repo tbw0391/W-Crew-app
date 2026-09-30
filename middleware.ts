@@ -27,7 +27,13 @@ function buildCsp(nonce: string) {
   ].join('; ');
 }
 
+// Westerville Crew moved to BoathouseOS (2026-09-30): every page of this old
+// app now goes to the same page on the new site, where members sign in with
+// the same email and password. Temporary (307) so it can be undone.
+const NEW_SITE = 'https://westerville.boathouseos.app';
+
 export async function middleware(request: NextRequest) {
+  return NextResponse.redirect(new URL(request.nextUrl.pathname + request.nextUrl.search, NEW_SITE), 307);
   const nonce = Buffer.from(crypto.randomUUID()).toString('base64');
   const csp = buildCsp(nonce);
 
